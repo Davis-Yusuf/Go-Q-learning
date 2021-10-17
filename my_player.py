@@ -1,4 +1,6 @@
 import numpy as np
+import random
+import sys
 
 WIN_REWARD = 1.0
 DRAW_REWARD = 0.5
@@ -20,3 +22,10 @@ class QLearner:
         self.history_states = []
         self.initial_value = initial_value
         # self.state = ?
+
+
+if __name__ == "__main__":
+    file = open('input.txt', 'r')
+
+    start = time.time()
+    method = file.readline().strip()
