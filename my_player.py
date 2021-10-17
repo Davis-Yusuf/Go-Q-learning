@@ -25,7 +25,3 @@ class QLearner:
 
 
 if __name__ == "__main__":
-    file = open('input.txt', 'r')
-
-    start = time.time()
-    method = file.readline().strip()
