@@ -35,26 +35,15 @@ class game:
     # Referenced set_board function from host.py
 
 
-    # # Referenced set_board function from host.py
-    # def detect_neighbor(self, x, y):
-    #     current_board = self.game_board
-    # # Referenced set_board function from host.py
-    #
-    #
-    # # Referenced set_board function from host.py
-    # def detect_neighbor_ally(self, i, j):
-    # # Referenced set_board function from host.py
-
-
 # Referenced readInput function from read.py
 def get_board(file='input.txt'):  # method for my player to read the input provided by host
     lines = open(file, 'r')  # Gets the lines from the input.txt file
     curr_player = lines.readline().rstrip('\n')  # Gets the player in play from the first line of input
     next_lines = lines.readlines()  # read the next lines
-    prev_board = [[int(x) for x in i.rstrip()] for i in next_lines[0: 5]]  # constructs previous board from lines 2-6
-    curr_board = [[int(x) for x in i.rstrip()] for i in next_lines[5: 10]]  # constructs current board from lines 7-11
+    previous_board = [[int(x) for x in i.rstrip()] for i in next_lines[0: 5]]  # constructs previous board from lines 2-6
+    current_board = [[int(x) for x in i.rstrip()] for i in next_lines[5: 10]]  # constructs current board from lines 7-11
 
-    return int(curr_player), prev_board, curr_board
+    return int(curr_player), previous_board, current_board
     # Referenced readInput function from read.py
 
 
@@ -68,12 +57,106 @@ def write(coordinates, file='output.txt'):  # method for my player to write the 
     # Referenced writeOutput function from write.py
 
 
-def legal_move(i , j, player):
+    # Referenced writeOutput function from write.py
+def compare(board):  # method for my player to write the location to play for the host
+    for i in range(5):
+        for j in range(5):
+            if prev_board[i][j] != board[i][j]:
+                return False
+    return True
+    # Referenced writeOutput function from write.py
+
+
+    # Referenced detect_neighbor_ally function from host.py
+def get_adjacent_pieces(i, j):
+    adjacent = []
+    if i <= 3:
+        adjacent.append((i + 1, j))
+    if j <= 3:
+        adjacent.append((i, j + 1))
+    if i >= 1:
+        adjacent.append((i - 1, j))
+    if j >= 1:
+        adjacent.append((i, j - 1))
+
+    return adjacent
+    # Referenced detect_neighbor_ally function from host.py
+
+
+    # Referenced detect_neighbor_ally function from host.py
+def get_connected_pieces(board, i, j):
+    connected_pieces = []
+    adjacent = get_adjacent_pieces(i, j)
+    for curr_piece in adjacent:
+        if board[i][j] == board[curr_piece[0]][curr_piece[1]]:
+            connected_pieces.append(curr_piece)
+    return connected_pieces
+    # Referenced detect_neighbor_ally function from host.py
+
+
+def has_liberty(board, i, j):
+    all_connected_pieces = []
+    search = [(i, j)]
+    while search:
+        curr_player = search.pop()
+        all_connected_pieces.append(curr_player)
+        adjacent_pieces = get_connected_pieces(board, curr_player[0], curr_player[1])
+        for curr_piece in adjacent_pieces:
+            if curr_piece not in all_connected_pieces and curr_piece not in search:
+                search.append(curr_piece)
+
+    for curr_piece in all_connected_pieces:
+        neighbors = get_adjacent_pieces(curr_piece[0], curr_piece[1])
+        for neighbor in neighbors:
+            if board[neighbor[0]][neighbor[1]] == 0:
+                return True
+
+    return False
+
+
+def get_new_board(board, opp_player):
+    bad_pieces = []
+    for i in range(5):
+        for j in range(5):
+            if board[i][j] == opp_player:
+                if not has_liberty(i, j):
+                    bad_pieces.append((i, j))
+
+    if not bad_pieces:
+        return board, True
+    for curr_piece in bad_pieces:
+        board[curr_piece[0]][curr_piece[1]] = 0
+    return board, False
+
+
+def legal_move(board, i, j, player):
+    if player:
+        curr_player = 1
+    else:
+        curr_player = 2
+
     if i > 4 or i < 0 or j > 4 or j < 0:
         return False
 
+    if board[i][j] == 1 or board[i][j] == 2:
+        return False
 
-def get_score(player, board):                             #TIME CAN BE IMPROVED????
+    board[i][j] = curr_player
+
+    if has_liberty(board, i, j):
+        return True
+
+    new_board, flag = get_new_board(board, 3 - curr_player)
+
+    if not has_liberty(new_board, i, j):
+        return False
+    else:
+        if flag is False and compare(new_board):
+            return False
+    return True
+
+
+def get_score(player, board):                             #TIME CAN BE IMPROVED without the ????
     b_points = 0
     w_points = 0
 
@@ -98,9 +181,10 @@ class AlphaBeta:
             val = -math.inf
             for i in range(0, 5):
                 for j in range(0, 5):
-                    if legal_move(i, j, max_player):            #QUESTION: DO WE MAKE A COPY OF BOARD
+                    if legal_move(board, i, j, max_player):
                         board[i][j] = 1
                         val = max(val, self.minimax_decision(board, depth - 1, alpha, beta, False))
+                        board[i][j] = 0
                         if val >= beta:
                             break
                         alpha = max(alpha, val)
@@ -109,9 +193,10 @@ class AlphaBeta:
             val = math.inf
             for i in range(0, 5):
                 for j in range(0, 5):
-                    if legal_move(i, j, False):            #QUESTION: DO WE MAKE A COPY OF BOARD
+                    if legal_move(board, i, j, False):
                         board[i][j] = 2
                         val = min(val, self.minimax_decision(board, depth - 1, alpha, beta, True))
+                        board[i][j] = 0
                         if val <= alpha:
                             break
                         beta = min(beta, val)
@@ -122,6 +207,4 @@ if __name__ == "__main__":
     piece, prev_board, curr_board = get_board()
     go = game
     go.check_game(piece, prev_board, curr_board)
-    player = AlphaBeta()
-    action = player.get_input(go, piece)
-    write(action)
+    # write(action)
