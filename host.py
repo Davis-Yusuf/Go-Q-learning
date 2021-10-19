@@ -229,7 +229,7 @@ class GO:
             verbose = False
 
         # Check if the place is in the board range
-        if not (i >= 0 and i < len(board)):
+        if not (0 <= i < len(board)):
             if verbose:
                 print(('Invalid placement. row should be in the range 1 to {}.').format(len(board) - 1))
             return False
