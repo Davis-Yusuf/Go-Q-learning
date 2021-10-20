@@ -1,6 +1,7 @@
 import sys
 import math
 import argparse
+from copy import deepcopy
 
 size = 5                              # size of the game board 5x5
 komi_rule = 2.5                       # storing the Komi rule: n / 2
@@ -33,10 +34,10 @@ def get_board(f='input.txt'):  # method for my player to read the input provided
     lines.close()
 
     return int(curr_player), previous_board, current_board
-    # Referenced readInput function from read.py
+# Referenced readInput function from read.py
 
 
-    # Referenced writeOutput function from write.py
+# Referenced writeOutput function from write.py
 def write(coordinates, f='output.txt'):  # method for my player to write the location to play for the host
     output = open(f, 'w')  # opens a file output.txt to write
     if coordinates == "PASS":  # if the player passes, we write pass
@@ -47,14 +48,14 @@ def write(coordinates, f='output.txt'):  # method for my player to write the loc
     # Referenced writeOutput function from write.py
 
 
-    # Referenced writeOutput function from write.py
+# Referenced writeOutput function from write.py
 def compare(board):  # method for my player to write the location to play for the host
     for i in range(5):
         for j in range(5):
             if prev_board[i][j] != board[i][j]:
                 return False
     return True
-    # Referenced writeOutput function from write.py
+# Referenced writeOutput function from write.py
 
 
 def is_empty(board):
@@ -65,7 +66,7 @@ def is_empty(board):
     return True
 
 
-    # Referenced detect_neighbor_ally function from host.py
+# Referenced detect_neighbor_ally function from host.py
 def get_adjacent_pieces(i, j):
     adjacent = []
     if i <= 3:
@@ -78,10 +79,10 @@ def get_adjacent_pieces(i, j):
         adjacent.append((i, j - 1))
 
     return adjacent
-    # Referenced detect_neighbor_ally function from host.py
+# Referenced detect_neighbor_ally function from host.py
 
 
-    # Referenced detect_neighbor_ally function from host.py
+# Referenced detect_neighbor_ally function from host.py
 def get_connected_pieces(board, i, j):
     connected_pieces = []
     adjacent = get_adjacent_pieces(i, j)
@@ -89,7 +90,7 @@ def get_connected_pieces(board, i, j):
         if board[i][j] == board[curr_piece[0]][curr_piece[1]]:
             connected_pieces.append(curr_piece)
     return connected_pieces
-    # Referenced detect_neighbor_ally function from host.py
+# Referenced detect_neighbor_ally function from host.py
 
 
 def has_liberty(board, i, j):
@@ -129,9 +130,9 @@ def get_new_board(board, opp_player):
 
 def legal_move(board, i, j, player):
     if player:
-        curr_player = 1
+        curr_player = piece
     else:
-        curr_player = 2
+        curr_player = 3 - piece
 
     if i > 4 or i < 0 or j > 4 or j < 0:
         return False
@@ -139,12 +140,13 @@ def legal_move(board, i, j, player):
     if board[i][j] == 1 or board[i][j] == 2:
         return False
 
-    board[i][j] = curr_player
+    temp_b = deepcopy(board)
+    temp_b[i][j] = curr_player
 
-    if has_liberty(board, i, j):
+    if has_liberty(temp_b, i, j):
         return True
 
-    new_board, flag = get_new_board(board, 3 - curr_player)
+    new_board, flag = get_new_board(temp_b, 3 - curr_player)
 
     if not has_liberty(new_board, i, j):
         return False
@@ -154,43 +156,40 @@ def legal_move(board, i, j, player):
     return True
 
 
-def get_score(player, board):
-    b_points = 0
-    w_points = 0
+def get_score(current_player, board):
+    max_points = 0
 
     for i in range(5):
         for j in range(5):
-            if board[i][j] == 1 and player:
-                b_points += 1
-            if board[i][j] == 2 and not player:
-                w_points += 1
+            if board[i][j] == current_player:
+                max_points += 1
+    return max_points
 
-    if player:
-        return b_points
-    else:
-        return w_points
 # def terminal(board):
 #     pass
 
 
 def minimax_decision(board, depth, alpha, beta, max_player):
     action = (0, 0)
-    if depth == 0 or count > max_steps:
-        return get_score(max_player, board), "PASS"
+    if depth == 0:  # or count > max_steps:
+        if max_player:
+            current_player = piece
+        else:
+            current_player = 3 - piece
+        return get_score(current_player, board), "PASS"  #BOTH PLAYER CALLS THIS
     if max_player:
         val = -math.inf
         for i in range(0, 5):
             for j in range(0, 5):
                 if legal_move(board, i, j, max_player):
-                    board[i][j] = 1
-                    temp1, temp2 = minimax_decision(board, depth - 1, alpha, beta, False)
-                    if val <= temp1:
-                        val = temp1
-                        action = temp2
+                    temp_board = deepcopy(board)
+                    temp_board[i][j] = piece
+                    next_val, next_action = minimax_decision(temp_board, depth - 1, alpha, beta, False)
+                    if val <= next_val:
+                        val = next_val
+                        action = next_action
                     else:
-                        val = val
-                        action = action
-                    board[i][j] = 0
+                        action = (i, j)
                     if val >= beta:
                         break
                     alpha = max(alpha, val)
@@ -200,11 +199,15 @@ def minimax_decision(board, depth, alpha, beta, max_player):
         for i in range(0, 5):
             for j in range(0, 5):
                 if legal_move(board, i, j, False):
-                    board[i][j] = 2
-                    temp3, temp4 = minimax_decision(board, depth - 1, alpha, beta, True)
-                    val, action = min(val, temp3), temp4
+                    tem_board = deepcopy(board)
+                    tem_board[i][j] = 3 - piece
+                    temp3, temp4 = minimax_decision(tem_board, depth - 1, alpha, beta, True)
+                    if val >= temp3:
+                        val = temp3
+                        action = temp4
+                    else:
+                        action = (i, j)
                     # val, action = min(val, self.minimax_decision(board, depth - 1, alpha, beta, True))
-                    board[i][j] = 0
                     if val <= alpha:
                         break
                     beta = min(beta, val)
@@ -214,29 +217,31 @@ def minimax_decision(board, depth, alpha, beta, max_player):
 if __name__ == "__main__":
     piece, prev_board, curr_board = get_board('input.txt')
 
-    with open("temp.txt", "a+") as f:
-        f.seek(0)
-        count = int(f.read() or 0) + 2
-        f.seek(0)
-        f.truncate()
-        f.write(str(count))
+    # with open("temp.txt", "a+") as f:
+    #     f.seek(0)
+    #     count = int(f.read() or 0) + 2
+    #     f.seek(0)
+    #     f.truncate()
+    #     f.write(str(count))
 
-    # file = open("temp.txt", "a+")
-    # file.seek(0)
-    # if is_empty(prev_board) and is_empty(curr_board):
-    #     count = 0
-    #     file.write(str(count))
-    # elif compare(curr_board) and not is_empty(prev_board) and not is_empty(curr_board):
-    #     count = int(file.read() or 0) + 1
-    #     file.truncate(0)
-    #     file.write(str(count))
-    # else:
-    #     count = int(file.read() or 0) + 2
-    #     file.truncate(0)
-    #     file.write(str(count))
-    #
-    # file.close()
+    file = open("temp.txt", "a+")
+    file.seek(0)
+    if is_empty(prev_board) and is_empty(curr_board):
+        count = 0
+        file.write(str(count))
+    elif compare(curr_board) and not is_empty(prev_board) and not is_empty(curr_board):
+        count = int(file.read() or 0) + 1
+        file.truncate(0)
+        file.write(str(count))
+    else:
+        print('this many times')
+        count = int(file.read() or 0) + 2
+        file.truncate(0)
+        file.write(str(count))
 
-    result = minimax_decision(curr_board, 3, -math.inf, math.inf, True)[1]
-    write(result)
+    file.close()
+
+    result, action = minimax_decision(curr_board, 2, -math.inf, math.inf, True)
+    print(result, action)
+    write(action)
 
