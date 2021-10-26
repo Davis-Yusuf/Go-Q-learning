@@ -3,10 +3,10 @@ import math
 import argparse
 from copy import deepcopy
 
+testing_var = (0, 0)
 size = 5                              # size of the game board 5x5
 komi_rule = 2.5                       # storing the Komi rule: n / 2
 max_steps = 24                        # max steps allowed in a 5x5 game: n * n - 1
-
 
 # # Referenced set_board function from host.py
 # def check_game(self, curr_piece, prev_board, current_board):
@@ -93,7 +93,7 @@ def get_connected_pieces(board, i, j):
 # Referenced detect_neighbor_ally function from host.py
 
 
-def has_liberty(board, i, j):
+def find_all_connected_pieces(board, i, j):
     all_connected_pieces = []
     search = [(i, j)]
     while search:
@@ -103,7 +103,11 @@ def has_liberty(board, i, j):
         for curr_piece in adjacent_pieces:
             if curr_piece not in all_connected_pieces and curr_piece not in search:
                 search.append(curr_piece)
+    return all_connected_pieces
 
+
+def has_liberty(board, i, j):
+    all_connected_pieces = find_all_connected_pieces(board, i, j)
     for curr_piece in all_connected_pieces:
         neighbors = get_adjacent_pieces(curr_piece[0], curr_piece[1])
         for neighbor in neighbors:
@@ -156,67 +160,81 @@ def legal_move(board, i, j, player):
     return True
 
 
+def do_action(board, curr_player, i, j):
+    temp_board = deepcopy(board)
+    temp_board[i][j] = curr_player
+    new_board, temp = get_new_board(temp_board, 3 - curr_player)
+
+    return new_board
+
+
+def update_action(i, j):
+    global testing_var
+    next_move = (i, j)
+    testing_var = next_move
+
+
 def get_score(current_player, board):
-    max_points = 0
+    curr_player_points = 0
+    opp_player_points = 0
+    reward = 0
 
     for i in range(5):
         for j in range(5):
             if board[i][j] == current_player:
-                max_points += 1
-    return max_points
+                curr_player_points += 1
+            elif board[i][j] == 3 - current_player:
+                opp_player_points += 1
+
+    if curr_player_points > opp_player_points:
+        reward += 1
+
+    return current_player + reward
 
 # def terminal(board):
 #     pass
 
 
 def minimax_decision(board, depth, alpha, beta, max_player):
-    action = (0, 0)
+    # global next_move
     if depth == 0:  # or count > max_steps:
-        if max_player:
+        if not max_player:
             current_player = piece
         else:
             current_player = 3 - piece
-        return get_score(current_player, board), "PASS"  #BOTH PLAYER CALLS THIS
+        return get_score(current_player, board)
     if max_player:
         val = -math.inf
         for i in range(0, 5):
             for j in range(0, 5):
                 if legal_move(board, i, j, max_player):
-                    temp_board = deepcopy(board)
-                    temp_board[i][j] = piece
-                    next_val, next_action = minimax_decision(temp_board, depth - 1, alpha, beta, False)
+                    temp_board = do_action(board, piece, i, j)
+                    next_val = minimax_decision(temp_board, depth - 1, alpha, beta, False)
                     if val <= next_val:
                         val = next_val
-                        action = next_action
-                    else:
-                        action = (i, j)
+                        if depth == 2:
+                            # next_move = (i, j)
+                            update_action(i, j)
                     if val >= beta:
                         break
                     alpha = max(alpha, val)
-        return val, action
+        return val
     else:
         val = math.inf
         for i in range(0, 5):
             for j in range(0, 5):
                 if legal_move(board, i, j, False):
-                    tem_board = deepcopy(board)
-                    tem_board[i][j] = 3 - piece
-                    temp3, temp4 = minimax_decision(tem_board, depth - 1, alpha, beta, True)
-                    if val >= temp3:
-                        val = temp3
-                        action = temp4
-                    else:
-                        action = (i, j)
-                    # val, action = min(val, self.minimax_decision(board, depth - 1, alpha, beta, True))
+                    tem_board = do_action(board, 3 - piece, i, j)
+                    val = min(val, minimax_decision(tem_board, depth - 1, alpha, beta, True))
                     if val <= alpha:
                         break
                     beta = min(beta, val)
-        return val, action
+        return val
 
 
 if __name__ == "__main__":
     piece, prev_board, curr_board = get_board('input.txt')
-
+    #next_move = (0, 0)
     # with open("temp.txt", "a+") as f:
     #     f.seek(0)
     #     count = int(f.read() or 0) + 2
@@ -228,6 +246,9 @@ if __name__ == "__main__":
     file.seek(0)
     if is_empty(prev_board) and is_empty(curr_board):
         count = 0
+        if piece == 1 or (piece == 2 and legal_move(curr_board, 2, 2, True)): 
+            write((2, 2))
+            exit()
         file.write(str(count))
     elif compare(curr_board) and not is_empty(prev_board) and not is_empty(curr_board):
         count = int(file.read() or 0) + 1
@@ -241,7 +262,7 @@ if __name__ == "__main__":
 
     file.close()
 
-    result, action = minimax_decision(curr_board, 2, -math.inf, math.inf, True)
-    print(result, action)
-    write(action)
+    result = minimax_decision(curr_board, 2, -math.inf, math.inf, True)
+    print(result, testing_var)
+    write(testing_var)
 
