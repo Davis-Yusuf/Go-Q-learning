@@ -1,1 +1,1 @@
-# Little-Go-Qlearning
+# Little-Go-Minimax Algorithm
